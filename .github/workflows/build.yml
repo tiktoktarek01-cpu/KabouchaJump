@@ -24,17 +24,23 @@ jobs:
           channel: 'stable'
           flutter-version: '3.22.2'
 
-      - name: Force Project Repair
+      - name: Force Project Repair & Fix Name
         run: |
-          # مسح أي أثر للاسم القديم وفرض الاسم الصغير
           sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
           rm -rf android/
           flutter create . --platforms android --project-name kabouchajump
           flutter pub get
+          # نرجعو minSdkVersion لـ 24 باش يرضى ffmpeg
+          sed -i 's/flutter.minSdkVersion/24/g' android/app/build.gradle
 
-      - name: Fix Plugins Namespace
+      - name: Fix Gallery Saver Namespace
         run: |
           find /home/runner/.pub-cache/hosted/pub.dev -name "build.gradle" -exec sed -i "s/android {/android { namespace 'temp.namespace'/g" {} +
+
+      - name: Inject FFmpeg Repositories (Hamida's Idea, Safely)
+        run: |
+          # نزيدو الروابط اللي جابهم حميدة بصح بطريقة آمنة ما تكسرش الكود
+          sed -i '/google()/a \ \ \ \ \ \ \ \ mavenCentral()\n\ \ \ \ \ \ \ \ maven { url "https://www.jitpack.io" }\n\ \ \ \ \ \ \ \ maven { url "https://maven.arthenica.org/" }' android/build.gradle
 
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
