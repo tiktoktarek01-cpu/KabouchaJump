@@ -1,4 +1,4 @@
-name: Build Flutter APK 2026
+name: Build Flutter APK 2026 - FINAL SURGEON
 
 on:
   push:
@@ -24,23 +24,17 @@ jobs:
           channel: 'stable'
           flutter-version: '3.22.2'
 
-      - name: Force Project Repair & Fix Name
+      - name: Prepare Project (Safe Mode)
         run: |
           sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
-          rm -rf android/
-          flutter create . --platforms android --project-name kabouchajump
+          flutter clean
           flutter pub get
-          # نرجعو minSdkVersion لـ 24 باش يرضى ffmpeg
-          sed -i 's/flutter.minSdkVersion/24/g' android/app/build.gradle
+          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
 
-      - name: Fix Gallery Saver Namespace
+      - name: Fix Plugins (Surgical Strike)
         run: |
-          find /home/runner/.pub-cache/hosted/pub.dev -name "build.gradle" -exec sed -i "s/android {/android { namespace 'temp.namespace'/g" {} +
-
-      - name: Inject FFmpeg Repositories (Hamida's Idea, Safely)
-        run: |
-          # نزيدو الروابط اللي جابهم حميدة بصح بطريقة آمنة ما تكسرش الكود
-          sed -i '/google()/a \ \ \ \ \ \ \ \ mavenCentral()\n\ \ \ \ \ \ \ \ maven { url "https://www.jitpack.io" }\n\ \ \ \ \ \ \ \ maven { url "https://maven.arthenica.org/" }' android/build.gradle
+          find /home/runner/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/gallery_saver*/*" -exec sed -i "s/android {/android { namespace 'caroline.com.gallery_saver'/g" {} + || true
+          find /home/runner/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/ffmpeg_kit_flutter*/*" -exec sed -i 's|https://maven\.arthenica\.org/|https://repo1.maven.org/maven2/|g' {} + || true
 
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
