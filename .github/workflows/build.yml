@@ -24,21 +24,30 @@ jobs:
           channel: 'stable'
           flutter-version: '3.22.2'
 
-      - name: Create Android Files & Prepare
+      - name: Prepare Project and Android Files
         run: |
+          # 1. توحيد اسم المشروع ليصبح مطابقاً لقوانين فلاتر
           sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
+          
+          # 2. تنظيف المشروع من أي مخلفات قديمة
           flutter clean
           
-          # هادا هو السطر السحري اللي نسيتو نتا مقبيل!
-          flutter create . --platforms android
+          # 3. بناء ملفات الأندرويد الناقصة بالاسم الصحيح إجبارياً
+          flutter create . --platforms android --project-name kabouchajump
           
+          # 4. تحميل المكتبات
           flutter pub get
+          
+          # 5. رفع نسخة الأندرويد إلى 24 لتعمل مكتبة ffmpeg بدون مشاكل
           sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
 
-      - name: Fix Plugins (Surgical Strike)
+      - name: Surgical Strike on Broken Plugins
         run: |
-          find /home/runner/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/gallery_saver*/*" -exec sed -i "s/android {/android { namespace 'caroline.com.gallery_saver'/g" {} + || true
-          find /home/runner/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/ffmpeg_kit_flutter*/*" -exec sed -i 's|https://maven\.arthenica\.org/|https://repo1.maven.org/maven2/|g' {} + || true
+          # 6. إصلاح مشكلة Namespace في إضافة gallery_saver
+          find /home/runner/.pub-cache -type f -name "build.gradle" -path "*/gallery_saver*/*" -exec sed -i "s/android {/android { namespace 'caroline.com.gallery_saver'/g" {} + || true
+          
+          # 7. إصلاح مشكلة السيرفر الميت في إضافة ffmpeg بتعويضه بالرابط الرسمي
+          find /home/runner/.pub-cache -type f -name "build.gradle" -path "*/ffmpeg_kit_flutter*/*" -exec sed -i 's|https://maven\.arthenica\.org/|https://repo1.maven.org/maven2/|g' {} + || true
 
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
