@@ -17,7 +17,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          # نحينا الكاش هنا باش ما تتبلوكاوش الماكينة
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -26,6 +25,11 @@ jobs:
 
       - name: Create Android Platform
         run: flutter create . --platforms android
+
+      - name: Fix Gallery Saver Plugin
+        run: |
+          flutter pub get
+          sed -i "s/android {/android { namespace 'caroline.com.gallery_saver'/g" /home/runner/.pub-cache/hosted/pub.dev/gallery_saver-*/android/build.gradle
 
       - name: Build Release APK
         run: flutter build apk --release
