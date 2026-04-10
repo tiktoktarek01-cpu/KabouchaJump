@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK - Fixed
 
 on:
   push:
@@ -21,7 +21,6 @@ jobs:
       with:
         distribution: temurin
         java-version: 17
-        java-package: jdk
 
     - name: Set up Flutter 3.22.2
       uses: subosito/flutter-action@v2
@@ -30,34 +29,67 @@ jobs:
         flutter-version: '3.22.2'
         cache: true
 
-    - name: Cache Flutter dependencies
+    - name: Cache Flutter
       uses: actions/cache@v5
       with:
         path: |
           ~/.pub-cache
-          .dart_tool/package_config.json
-          .packages
-        key: flutter-${{ hashFiles('**/pubspec.lock') }}
-        restore-keys: flutter-
+        key: flutter-${{ runner.os }}-3.22.2-${{ hashFiles('**/pubspec.lock') }}
 
-    - name: Prepare Flutter project
+    # 🔥 الحل الجذري هنا:
+    - name: Backup source code
       run: |
+        mkdir -p backup
+        cp -r lib/* backup/ 2>/dev/null || true
+        cp -r assets/* backup/ 2>/dev/null || true
+        cp pubspec.yaml backup/ 2>/dev/null || true
+
+    - name: Fix project structure
+      run: |
+        # 1. غيّر اسم المشروع
         sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
-        flutter clean
+        
+        # 2. امسح المشروع القديم
+        rm -rf lib/ android/ ios/ test/ web/ windows/ linux/ macos/
+        
+        # 3. أعد إنشاء المشروع الجديد
+        flutter create . --project-name kabouchajump --platforms android
+        
+        # 4. أعد الكود الأصلي
+        rm -rf lib/*
+        cp -r backup/* lib/ 2>/dev/null || true
+        
+        # 5. حدّث التبعيات
         flutter pub get
 
-    - name: Update Android settings
+    - name: Update Android config
       run: |
-        sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle || true
-        sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
-        sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
+        # حديث Android settings
+        sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
+        sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle
+        sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle
+        
+        # إصلاح MainActivity
+        cat > android/app/src/main/kotlin/com/example/kabouchajump/MainActivity.kt << 'EOF'
+package com.example.kabouchajump
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity() {
+}
+EOF
+
+    - name: Fix FFmpeg dependency
+      run: |
+        # استبدال ffmpeg_kit_flutter بالإصدار الجديد
+        sed -i 's/ffmpeg_kit_flutter: .*/ffmpeg_kit_flutter_min: ^6.0.3/g' pubspec.yaml
+        flutter pub get
 
     - name: Build APK
       run: flutter build apk --release
 
-    - name: Upload APK artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: kabouchajump-${{ github.sha }}.apk
+        name: kabouchajump-${{ github.sha }}
         path: build/app/outputs/flutter-apk/app-release.apk
-        retention-days: 30
