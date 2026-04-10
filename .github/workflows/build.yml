@@ -1,5 +1,9 @@
 name: Build Flutter APK 2026
-on: [push, workflow_dispatch]
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,11 +25,7 @@ jobs:
           channel: 'stable'
 
       - name: Create Android Platform
-        run: flutter create . --platforms android 
-      - name: Fix SDK for FFmpeg
-        run: |
-          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
-          flutter pub get
+        run: flutter create . --platforms android
 
       - name: Build Release APK
         run: flutter build apk --release
