@@ -1,4 +1,4 @@
-name: Build Flutter APK 2026 - FINAL SURGEON
+name: Build Flutter APK 2026
 
 on:
   push:
@@ -24,10 +24,14 @@ jobs:
           channel: 'stable'
           flutter-version: '3.22.2'
 
-      - name: Prepare Project (Safe Mode)
+      - name: Create Android Files & Prepare
         run: |
           sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
           flutter clean
+          
+          # هادا هو السطر السحري اللي نسيتو نتا مقبيل!
+          flutter create . --platforms android
+          
           flutter pub get
           sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
 
