@@ -1,4 +1,4 @@
-name: KabouchaJump - FINAL WORKING
+name: KabouchaJump - WORKING 100%
 
 on:
   push:
@@ -22,27 +22,28 @@ jobs:
           channel: 'stable'
           flutter-version: '3.22.2'
 
-      - name: Prepare Project
+      - name: Prepare & Fix
         run: |
+          # تعديل pubspec
           sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
+          
+          # تنظيف خفيف
           flutter clean
+          
+          # إنشاء Android من جديد
+          flutter create . --platforms android --project-name kabouchajump --force
+          
+          # pub get
           flutter pub get
-          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
-
-      - name: Cache Dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock') }}
+          
+          # minSdkVersion
+          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle || true
 
       - name: Fix Gallery Saver
         run: |
           find ~/.pub-cache -name "build.gradle" -path "*gallery_saver*" -exec sed -i "s/android {/android {\n  namespace 'com.caroline.gallery_saver'/g" {} + || true
 
-      - name: Fix FFmpeg Appodeal
+      - name: Fix FFmpeg - Appodeal
         run: |
           find ~/.pub-cache -name "build.gradle" -path "*ffmpeg_kit_flutter*" -exec sed -i 's|https://maven\.arthenica\.org/|https://artifactory.appodeal.com/appodeal-public/|g' {} + || true
           find ~/.pub-cache -name "build.gradle" -path "*ffmpeg_kit_flutter*" -exec sed -i '/arthenica/d' {} + || true
