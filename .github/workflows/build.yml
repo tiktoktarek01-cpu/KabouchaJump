@@ -1,75 +1,55 @@
 
-name: Build APK Fixed
+name: Build Flutter APK 2026
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
-    
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        repository: tiktoktarek01-cpu/KabouchaJump
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.22.2'
-        channel: 'stable'
-        cache: true
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.22.2'
 
-    - name: Cache pub dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.pub-cache
-        key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+      - name: Prepare Project and Android Files
+        run: |
+          sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
+          flutter clean
+          flutter create . --platforms android --project-name kabouchajump
+          flutter pub get
+          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
+          
+          # الدواء: نزيدو رابط Appodeal في ملفات المشروع باش يلقاه 100%
+          sed -i '/mavenCentral()/a \        maven { url "https://artifactory.appodeal.com/appodeal-public/" }' android/settings.gradle || true
+          sed -i '/mavenCentral()/a \        maven { url "https://artifactory.appodeal.com/appodeal-public/" }' android/build.gradle || true
 
-    - name: Backup app code
-      run: |
-        mkdir -p backup
-        find . -maxdepth 1 -name "lib" -exec cp -r {} backup/ \; || true
-        find . -maxdepth 1 -name "assets" -exec cp -r {} backup/ \; || true
-        cp pubspec.yaml backup/ || true
+      - name: Surgical Strike on Broken Plugins
+        run: |
+          # 1. إصلاح مشكلة Gallery Saver
+          find /home/runner/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/gallery_saver*/*" -exec sed -i "s/android {/android { namespace 'caroline.com.gallery_saver'/g" {} + || true
+          
+          # 2. الضربة القاضية: تغيير اسم الإضافة بالكامل للنسخة الموجودة حصرياً في السيرفر الجديد
+          find /home/runner/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/ffmpeg_kit_flutter*/*" -exec sed -i 's/ffmpeg-kit-https:6.0-2/ffmpeg-kit-full-gpl:6.0-2.LTS/g' {} + || true
 
-    - name: Recreate Flutter project
-      run: |
-        sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
-        rm -rf lib android ios test web
-        flutter create . --project-name kabouchajump --platforms android
-        rm -rf lib/*
-        cp -r backup/lib/* lib/ 2>/dev/null || true
-        flutter pub get
+      - name: Build Release APK
+        run: flutter build apk --release --no-tree-shake-icons
 
-    - name: Update Android settings
-      run: |
-        sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle || true
-        sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
-        sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
-
-    - name: Fix FFmpeg dependency
-      run: |
-        sed -i '/ffmpeg_kit_flutter:/d' pubspec.yaml
-        sed -i '/^dependencies:/a\  ffmpeg_kit_flutter_min: ^6.0.3' pubspec.yaml
-        flutter pub get
-
-    - name: Build release APK
-      run: flutter build apk --release
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: kabouchajump-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KabouchaJump-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
