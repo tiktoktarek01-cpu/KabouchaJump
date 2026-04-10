@@ -1,55 +1,38 @@
-name: Build Flutter APK (Mobile-Only)
-
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
-
-permissions:
-  contents: read
+name: Build Flutter APK 2026
+on: [push, workflow_dispatch]
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Setup Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-        cache: 'gradle'
-    
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        channel: 'stable'
-        cache: true
-    
-    - name: Create Android platform
-      run: flutter create . --platforms android
-    
-    - name: Configure Android for FFmpeg
-      run: |
-        sed -i 's/minSdkVersion .*/minSdkVersion 24/' android/app/build.gradle
-        sed -i '/defaultConfig {/a\          multiDexEnabled true' android/app/build.gradle
-        sed -i 's/compileSdk .*/compileSdk 35/' android/app/build.gradle
-        sed -i 's/targetSdkVersion .*/targetSdkVersion 35/' android/app/build.gradle
-    
-    - name: Get Flutter dependencies
-      run: flutter pub get
-    
-    - name: Build Release APK
-      run: flutter build apk --release --split-per-abi
-    
-    - name: Upload APK Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: KabouchaJump-Final-APK
-        path: build/app/outputs/flutter-apk/app-*.apk
-        retention-days: 30
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          # نحينا الكاش هنا باش ما تتبلوكاوش الماكينة
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Create Android Platform
+        run: flutter create . --platforms android --force
+
+      - name: Fix SDK for FFmpeg
+        run: |
+          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
+          flutter pub get
+
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KabouchaJump-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
