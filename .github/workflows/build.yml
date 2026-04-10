@@ -24,13 +24,13 @@ jobs:
           channel: 'stable'
           flutter-version: '3.22.2'
 
-      - name: Fix Package Name and Repair
+      - name: Force Project Repair
         run: |
-          # هاد السطر يبدل الاسم من KabouchaJump لـ kabouchajump باش فلاتر يرضى
-          sed -i 's/name: KabouchaJump/name: kabouchajump/g' pubspec.yaml
-          flutter clean
+          # مسح أي أثر للاسم القديم وفرض الاسم الصغير
+          sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
+          rm -rf android/
+          flutter create . --platforms android --project-name kabouchajump
           flutter pub get
-          flutter create . --platforms android
 
       - name: Fix Plugins Namespace
         run: |
