@@ -1,48 +1,63 @@
-name: KabouchaJump - FIXED 100%
+name: Build APK
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    
+    runs-on: ubuntu-24.04
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    - uses: actions/checkout@v4
+      with:
+        repository: tiktoktarek01-cpu/KabouchaJump
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          flutter-version: '3.22.2'
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+        java-package: jdk
 
-      - name: Prepare Project
-        run: |
-          sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
-          flutter clean
-          flutter create . --platforms android --project-name kabouchajump
-          flutter pub get
-          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle || true
+    - name: Set up Flutter 3.22.2
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        flutter-version: '3.22.2'
+        cache: true
 
-      - name: Fix Gallery Saver
-        run: |
-          find ~/.pub-cache -name "build.gradle" -path "*gallery_saver*" -exec sed -i "s/android {/android {\n  namespace 'com.caroline.gallery_saver'/g" {} + || true
+    - name: Cache Flutter dependencies
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.pub-cache
+          .dart_tool/package_config.json
+          .packages
+        key: flutter-${{ hashFiles('**/pubspec.lock') }}
+        restore-keys: flutter-
 
-      - name: Fix FFmpeg Appodeal
-        run: |
-          find ~/.pub-cache -name "build.gradle" -path "*ffmpeg_kit_flutter*" -exec sed -i 's|https://maven\.arthenica\.org/|https://artifactory.appodeal.com/appodeal-public/|g' {} + || true
-          find ~/.pub-cache -name "build.gradle" -path "*ffmpeg_kit_flutter*" -exec sed -i '/arthenica/d' {} + || true
+    - name: Prepare Flutter project
+      run: |
+        sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
+        flutter clean
+        flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release
+    - name: Update Android settings
+      run: |
+        sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle || true
+        sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
+        sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: KabouchaJump-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+    - name: Build APK
+      run: flutter build apk --release
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kabouchajump-${{ github.sha }}.apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 30
