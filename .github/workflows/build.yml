@@ -22,18 +22,18 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.22.2' # ثبتنا النسخة باش ما يغلطش
 
-      - name: Clean and Get Dependencies
+      - name: Repair Project
         run: |
           flutter clean
           flutter pub get
+          flutter create . --platforms android
 
-      - name: Create Android Platform
-        run: flutter create . --platforms android
-
-      - name: Fix Gallery Saver Plugin
+      - name: Fix Plugins Namespace
         run: |
-          sed -i "s/android {/android { namespace 'caroline.com.gallery_saver'/g" /home/runner/.pub-cache/hosted/pub.dev/gallery_saver-*/android/build.gradle
+          find /home/runner/.pub-cache/hosted/pub.dev -name "build.gradle" -exec sed -i "s/android {/android { namespace 'temp.namespace'/g" {} +
+          # هاد السطر يفرض اسم مؤقت على قاع الإضافات باش يخلي السيرفر يجوز
 
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
