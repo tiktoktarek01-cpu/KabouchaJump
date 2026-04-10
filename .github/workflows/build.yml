@@ -1,4 +1,4 @@
-name: KabouchaJump - Build APK 2026 FINAL
+name: KabouchaJump - Build APK FINAL
 
 on:
   push:
@@ -8,96 +8,46 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     
     steps:
-      # 1. Checkout الكود
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-
-      # 2. Java 17
-      - name: ☕ Setup Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
 
-      # 3. Flutter 3.22.2
-      - name: 🦋 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           flutter-version: '3.22.2'
           cache: true
 
-      # 4. Cache الـ dependencies (قبل الـ pub get)
-      - name: 💾 Cache Flutter & Dependencies
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.pub-cache
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-flutter-
 
-      # 5. تحضير المشروع
-      - name: 🛠️ Prepare Project
+      - name: Prepare
         run: |
-          echo "📝 تعديل pubspec.yaml..."
           sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
-          
-          echo "🧹 تنظيف المشروع..."
           flutter clean
-          
-          echo "📱 إعادة إنشاء Android..."
-          flutter create . --platforms android --project-name kabouchajump
-          
-          echo "📦 تحميل الـ dependencies..."
           flutter pub get
-          
-          echo "📱 تعديل minSdkVersion..."
           sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
 
-      # 6. الضربة القاضية للمشاكل!
-      - name: ⚔️ SURGICAL STRIKE - إصلاح الـ plugins
+      - name: Fix Plugins
         run: |
-          echo "🎯 إصلاح Gallery Saver..."
-          find ~/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/gallery_saver-*/android/*" -exec sed -i "s/android {/android {\n    namespace 'com.caroline.gallery_saver'/g" {} + || true
-          
-          echo "🔥 إصلاح FFmpeg Kit - Appodeal Server..."
-          find ~/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/ffmpeg_kit_flutter-*/android/*" -exec sed -i 's|https://maven\.arthenica\.org/|https://artifactory.appodeal.com/appodeal-public/|g' {} + || true
-          
-          echo "🗑️ حذف arthenica repositories..."
-          find ~/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/ffmpeg_kit_flutter-*/android/*" -exec sed -i '/arthenica/d' {} + || true
-          
-          echo "✅ إضافة Appodeal repository..."
-          find ~/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/ffmpeg_kit_flutter-*/android/*" -exec bash -c '
-            if ! grep -q "artifactory.appodeal.com" "$1"; then
-              sed -i "/repositories {/a\
-  maven {\n    url \"https://artifactory.appodeal.com/appodeal-public/\"\n  }" "$1"
-            fi' {} {} \; || true
+          find ~/.pub-cache -name "build.gradle" -path "*/gallery_saver*" -exec sed -i "s/android {/android {\n  namespace 'com.caroline.gallery_saver'/g" {} +
+          find ~/.pub-cache -name "build.gradle" -path "*/ffmpeg_kit_flutter*" -exec sed -i 's|https://maven\.arthenica\.org/|https://artifactory.appodeal.com/appodeal-public/|g' {} +
+          find ~/.pub-cache -name "build.gradle" -path "*/ffmpeg_kit_flutter*" -exec sed -i '/arthenica/d' {} +
 
-      # 7. بناء الـ APK
-      - name: 🚀 Build Release APK
-        run: |
-          flutter doctor -v
-          flutter build apk --release --no-tree-shake-icons
+      - run: flutter build apk --release
 
-      # 8. رفع الـ APK
-      - name: 📤 Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: KabouchaJump-APK-${{ github.sha }}
+          name: KabouchaJump-APK
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-
-      # 9. معلومات النجاح
-      - name: 🎉 Success Info
-        if: success()
-        run: |
-          echo "✅ البناء نجح!"
-          echo "📱 APK جاهز للتحميل!"
-          echo "🔗 تحقق من الـ Artifacts أعلاه"
