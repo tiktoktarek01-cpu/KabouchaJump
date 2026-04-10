@@ -21,8 +21,7 @@ jobs:
           channel: 'stable'
 
       - name: Create Android Platform
-        run: flutter create . --platforms android --force
-
+        run: flutter create . --platforms android 
       - name: Fix SDK for FFmpeg
         run: |
           sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
