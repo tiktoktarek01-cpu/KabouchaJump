@@ -22,10 +22,12 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: '3.22.2' # ثبتنا النسخة باش ما يغلطش
+          flutter-version: '3.22.2'
 
-      - name: Repair Project
+      - name: Fix Package Name and Repair
         run: |
+          # هاد السطر يبدل الاسم من KabouchaJump لـ kabouchajump باش فلاتر يرضى
+          sed -i 's/name: KabouchaJump/name: kabouchajump/g' pubspec.yaml
           flutter clean
           flutter pub get
           flutter create . --platforms android
@@ -33,7 +35,12 @@ jobs:
       - name: Fix Plugins Namespace
         run: |
           find /home/runner/.pub-cache/hosted/pub.dev -name "build.gradle" -exec sed -i "s/android {/android { namespace 'temp.namespace'/g" {} +
-          # هاد السطر يفرض اسم مؤقت على قاع الإضافات باش يخلي السيرفر يجوز
 
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KabouchaJump-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
