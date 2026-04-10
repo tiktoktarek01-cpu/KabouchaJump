@@ -1,4 +1,4 @@
-name: KabouchaJump - Build APK FINAL
+name: KabouchaJump - FINAL WORKING
 
 on:
   push:
@@ -16,15 +16,21 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           flutter-version: '3.22.2'
-          cache: true
 
-      - uses: actions/cache@v4
+      - name: Prepare Project
+        run: |
+          sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
+          flutter clean
+          flutter pub get
+          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
+
+      - name: Cache Dependencies
+        uses: actions/cache@v4
         with:
           path: |
             ~/.pub-cache
@@ -32,20 +38,17 @@ jobs:
             ~/.gradle/wrapper
           key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock') }}
 
-      - name: Prepare
+      - name: Fix Gallery Saver
         run: |
-          sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
-          flutter clean
-          flutter pub get
-          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
+          find ~/.pub-cache -name "build.gradle" -path "*gallery_saver*" -exec sed -i "s/android {/android {\n  namespace 'com.caroline.gallery_saver'/g" {} + || true
 
-      - name: Fix Plugins
+      - name: Fix FFmpeg Appodeal
         run: |
-          find ~/.pub-cache -name "build.gradle" -path "*/gallery_saver*" -exec sed -i "s/android {/android {\n  namespace 'com.caroline.gallery_saver'/g" {} +
-          find ~/.pub-cache -name "build.gradle" -path "*/ffmpeg_kit_flutter*" -exec sed -i 's|https://maven\.arthenica\.org/|https://artifactory.appodeal.com/appodeal-public/|g' {} +
-          find ~/.pub-cache -name "build.gradle" -path "*/ffmpeg_kit_flutter*" -exec sed -i '/arthenica/d' {} +
+          find ~/.pub-cache -name "build.gradle" -path "*ffmpeg_kit_flutter*" -exec sed -i 's|https://maven\.arthenica\.org/|https://artifactory.appodeal.com/appodeal-public/|g' {} + || true
+          find ~/.pub-cache -name "build.gradle" -path "*ffmpeg_kit_flutter*" -exec sed -i '/arthenica/d' {} + || true
 
-      - run: flutter build apk --release
+      - name: Build APK
+        run: flutter build apk --release
 
       - uses: actions/upload-artifact@v4
         with:
