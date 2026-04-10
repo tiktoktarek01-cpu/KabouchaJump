@@ -1,4 +1,3 @@
-
 name: Build Flutter APK 2026
 
 on:
@@ -25,25 +24,21 @@ jobs:
           channel: 'stable'
           flutter-version: '3.22.2'
 
-      - name: Prepare Project and Android Files
+      - name: Prepare Project and Fix SDK Version
         run: |
           sed -i 's/name: .*/name: kabouchajump/g' pubspec.yaml
           flutter clean
+          flutter config --no-analytics
           flutter create . --platforms android --project-name kabouchajump
           flutter pub get
-          sed -i 's/minSdkVersion .*/minSdkVersion 24/g' android/app/build.gradle
-          
-          # الدواء: نزيدو رابط Appodeal في ملفات المشروع باش يلقاه 100%
-          sed -i '/mavenCentral()/a \        maven { url "https://artifactory.appodeal.com/appodeal-public/" }' android/settings.gradle || true
-          sed -i '/mavenCentral()/a \        maven { url "https://artifactory.appodeal.com/appodeal-public/" }' android/build.gradle || true
+          find android -name "build.gradle" -exec sed -i 's/minSdkVersion .*/minSdkVersion 24/g' {} +
+          sed -i 's/flutter.minSdkVersion/24/g' android/app/build.gradle || true
 
       - name: Surgical Strike on Broken Plugins
         run: |
-          # 1. إصلاح مشكلة Gallery Saver
           find /home/runner/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/gallery_saver*/*" -exec sed -i "s/android {/android { namespace 'caroline.com.gallery_saver'/g" {} + || true
-          
-          # 2. الضربة القاضية: تغيير اسم الإضافة بالكامل للنسخة الموجودة حصرياً في السيرفر الجديد
           find /home/runner/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/ffmpeg_kit_flutter*/*" -exec sed -i 's/ffmpeg-kit-https:6.0-2/ffmpeg-kit-full-gpl:6.0-2.LTS/g' {} + || true
+          find /home/runner/.pub-cache/hosted/pub.dev -type f -name "build.gradle" -path "*/ffmpeg_kit_flutter*/*" -exec sed -i '/mavenCentral()/a \        maven { url "https://artifactory.appodeal.com/appodeal-public/" }' {} + || true
 
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
